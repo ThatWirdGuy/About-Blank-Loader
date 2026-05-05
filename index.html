@@ -13,12 +13,12 @@
     height: 100%;
     font-family: Arial, sans-serif;
     background: #bcbcbc;
-
     box-shadow:
       inset 4px 4px 0 #ffffff,
       inset -4px -4px 0 #8a8a8a,
       inset 8px 8px 0 #dfdfdf,
       inset -8px -8px 0 #5a5a5a;
+    overflow: hidden;
   }
 
   /* ===== LOADING SCREEN ===== */
@@ -40,7 +40,7 @@
     pointer-events: none;
   }
 
-  /* ===== CENTER PANEL (BEVELED) ===== */
+  /* ===== CENTER PANEL ===== */
   #menuWrapper {
     height: 100%;
     display: flex;
@@ -74,39 +74,24 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    outline: none;
-
     box-shadow:
       inset 2px 2px 0 rgba(255,255,255,0.45),
       inset -2px -2px 0 rgba(0,0,0,0.35),
       5px 5px 10px rgba(0,0,0,0.45);
-
-    transition:
-      transform 0.08s ease,
-      box-shadow 0.08s ease,
-      filter 0.12s ease;
+    transition: transform 0.08s ease, filter 0.12s ease;
   }
 
   .btn:hover {
     transform: translateY(-2px);
     filter: brightness(1.08);
-    box-shadow:
-      inset 2px 2px 0 rgba(255,255,255,0.55),
-      inset -2px -2px 0 rgba(0,0,0,0.3),
-      8px 8px 16px rgba(0,0,0,0.5),
-      0 0 12px rgba(0,255,60,0.45);
   }
 
   .btn:active {
     transform: translateY(1px);
     filter: brightness(0.95);
-    box-shadow:
-      inset -3px -3px 0 rgba(255,255,255,0.45),
-      inset 3px 3px 0 rgba(0,0,0,0.5),
-      2px 2px 6px rgba(0,0,0,0.6);
   }
 
-  /* ===== IFRAME ===== */
+  /* ===== IFRAME CONTAINER ===== */
   #iframeContainer {
     position: fixed;
     inset: 0;
@@ -141,27 +126,27 @@
 
 <script>
   // --- CONFIGURATION ---
-  
-  // 1. Your Main URL (e.g., google.com)
-  const BASE_URL = "https://race-online-skem.vercel.app"; 
+  const DEFAULT_BASE = "https://race-online-skem.vercel.app"; 
 
-  // 2. Your Subfolder (e.g., /games/subfolder)
-  // LEAVE AS "" IF YOU DON'T WANT A SUBFOLDER.
-  const SUB_FOLDER = ""; 
-
-  // --- URL CONSTRUCTION LOGIC ---
-  // This logic automatically ignores SUB_FOLDER if it's empty
-  // and prevents double slashes // if both have slashes.
-  function buildUrl(base, sub) {
-    let cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
-    if (!sub || sub.trim() === "") {
-      return cleanBase;
+  // --- DYNAMIC URL LOGIC ---
+  function getTargetUrl() {
+    // This grabs everything after the "/" in your URL
+    // e.g., if you visit site.com/google.com, path is "google.com"
+    const path = window.location.pathname.substring(1);
+    
+    if (!path || path === "") {
+      return DEFAULT_BASE;
     }
-    let cleanSub = sub.startsWith("/") ? sub : "/" + sub;
-    return cleanBase + cleanSub;
+
+    // Ensure the path has https:// so it loads correctly in the iframe
+    if (!path.startsWith('http')) {
+      return "https://" + path;
+    }
+    
+    return path;
   }
 
-  const FULL_URL = buildUrl(BASE_URL, SUB_FOLDER);
+  const FINAL_URL = getTargetUrl();
 
   // --- UI LOGIC ---
   window.addEventListener("DOMContentLoaded", () => {
@@ -173,31 +158,30 @@
   function playOnSite() {
     document.getElementById("menuWrapper").style.display = "none";
     document.getElementById("iframeContainer").style.display = "block";
-    document.getElementById("siteFrame").src = FULL_URL;
+    document.getElementById("siteFrame").src = FINAL_URL;
   }
 
   function openFullscreen() {
     const win = window.open("about:blank", "_blank");
-    if(!win) {
-        alert("Pop-up blocked! Please allow pop-ups for Fullscreen mode.");
-        return;
+    if (win) {
+      win.document.write(`
+        <html>
+          <head>
+            <title>ActivityLab</title>
+            <style>
+              body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
+              iframe { width: 100%; height: 100%; border: none; }
+            </style>
+          </head>
+          <body>
+            <iframe src="${FINAL_URL}" allowfullscreen></iframe>
+          </body>
+        </html>
+      `);
+      win.document.close();
+    } else {
+      alert("Pop-up blocked!");
     }
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>ActivityLab - Fullscreen</title>
-        <style>
-          html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: black; overflow: hidden; }
-          iframe { width: 100%; height: 100%; border: none; }
-        </style>
-      </head>
-      <body>
-        <iframe src="${FULL_URL}" allowfullscreen></iframe>
-      </body>
-      </html>
-    `);
-    win.document.close();
   }
 </script>
 
